@@ -1,0 +1,145 @@
+<!DOCTYPE HTML>
+<!--
+	Hyperspace by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>Optimizing Sensor Network Design for Multiple Coverage</title> 
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+		<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+		<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+		<style>
+			.container {
+				display: flex;
+			}
+		</style>
+	</head>
+	<body class="is-preload">
+
+		<!-- Header -->
+			<header id="header">
+				<a href="index.html" class="title">Project Description</a>
+				<nav>
+					<ul>
+						<li><a href="index.html">Home</a></li>
+					</ul>
+				</nav>
+			</header>
+
+		<!-- Wrapper -->
+			<div id="wrapper">
+
+				<!-- Main -->
+					<section id="main" class="wrapper">
+						<div class="inner">
+							<center>
+							<h1>Optimizing Sensor Network Design for Multiple Coverage</h1> 
+							</center>
+							<hr>
+							<p>Sensor placement optimization methods have been studied extensively. They can be applied to a wide range of applications, including surveillance of known environments, optimal locations for 5G towers, and placement of missile defense systems. However, few works explore the robustness and efficiency of the resulting sensor network concerning sensor failure or adversarial attacks. This paper addresses this issue by optimizing for the least number of sensors to achieve multiple coverage of non-simply connected domains by a prescribed number of sensors. We introduce a new objective function for the greedy (next-best-view) algorithm to design efficient and robust sensor networks and derive theoretical bounds on the network's optimality. 
+							We further introduce a Deep Learning model to accelerate the algorithm for near real-time computations. The Deep Learning model requires the generation of training examples. Correspondingly, we show that understanding the geometric properties of the training data set provides important insights into the performance and training process of deep learning techniques. Finally, we demonstrate that a simple parallel version of the greedy approach using a simpler objective can be highly competitive.</p>
+							<center>
+							<video width="1000" height="500" controls><source src="images/project_MultiCov/ParGreedy_Video.mp4" type="video/mp4"></video>
+							</center>
+						
+							<h2>Introduction</h2> 
+							<p>In the multi-coverage sensor placement problem the goal is to compute optimal sensor locations such that the majority of the free space is observed by at least \( k \) sensors. For this we assume that an environment \( \Omega \) consists of regions occluded by obstacles \( \Omega_\text{obs} \) and free space \( \Omega_\text{free} \).</p>
+							
+							<div class="container">
+								<div>
+									<p>A point \( x \in \Omega_\text{free} \) is visible to another point \( y \in \Omega_\text{free} \) if there is an unobstructed straight line between them.</p>
+									<p>\[ \mathbf{x} \overset{\text{vis}}{\sim} \mathbf{y} \iff  \forall t \in [0,1] \text{: } t\mathbf{x} + (1-t)\mathbf{y} \in \Omega_\text{free}. \]</p>
+						
+									<p>The order of visibility function \( \mathcal{O}_\text{vis} \) returns the number of sensors in a set of sensor \( P \) that observe a given point.</p>
+									<p>\[ \mathcal{O}_\text{vis}(\mathbf{y}; P) = \sum_{x \in P} \phi_{\mathbf{x}}(\mathbf{y}) \]</p>
+									<p>where</p> 
+									<p>\[ \phi_{\mathbf{x}}(\mathbf{y}) = \begin{cases} 1, & \text{if } \mathbf{x} \overset{\text{vis}}{\sim} \mathbf{y},\\ 0, & \text{else.} \end{cases} \]</p>
+									<p>The multi-coverage sensor placement problem can then be described as</p>
+								</div>
+								<div>
+								<img src="images/project_MultiCov/OvisK.png" align="right" width="700" height="525">
+								</div>
+							</div>
+							<hr>
+								<h4>Multiple coverage optimization:</h4>
+								<p>Find the minimal set of sensors \( P = \{x_1,...,x_n\} \) such that</p>
+								<p>\[ \text{Vol} \left( \left\{y\in \Omega \vert~ \mathcal{O}_\text{vis}(y; P) \geq k \right\} \right) \le (1 - \delta) \text{Vol}(\Omega_{\text{free}}), \]</p>
+								<p>for some given threshold \( \delta \in (0,1). \) </p>
+							<h2>Greedy Algorithm</h2>
+							<p>Even the single coverage problem is known to be NP-complete for general environments. To address the challenge of efficient computation of sensor location we relax the problem using the next-best-view principle where sequences of sensors are generated instead of sets. This leads to the development of the \( \epsilon \)-greedy algorithm.</p>
+							<pre><code>def eps_greedy_alg(eps, k):
+	P = list()
+	while Vol(O_vis(P) >= k) <= delta:
+		G = compute_objective_G(P, k)
+		M = max(G)
+		feasible = [x for x in PossibleLocations if G(x) >= (1-eps)*M]
+		x = feasible[randint(0, len(feasible))]
+		P.append(x)
+	return P</code></pre>
+							<p>This algorithm chooses the next sensor by (somewhat) greedily maximizing a objective function (using function  <span style="font-family: monospace;">compute_objective_G</span>). In our case the objective function return the gained volume of regions of order up to target order \( k \) by placing a new sensor in a given location.</p>
+							<p>\[ \mathcal{G}_k(x, P) = \sum_{i=1}^k w_i \int_{\Omega_\text{free}} 1_{\{\mathcal{O}_{\text{vis}}(\mathbf{z}, P \cup \{x\}) \geq i\}} - 1_{\{\mathcal{O}_{\text{vis}}(\mathbf{z}, P) \geq i\}} d\mathbf{z}. \]</p>
+							<p>Here the integrals descirbe the gain in the volume of regions of order at least \( i \) which are weighted by weights \( w_i \). The weights describe the priority of different orders of visiblity in the algorithm.</p>
+							<p>To measure the quality of a set of sensors we use a function \( f_k \) closely realted to the objective function \( \mathcal{G}_k \).</p>
+							<p>\[ f_k(P) = \sum_{i=1}^k w_i \int_{\Omega_\text{free}} 1_{\{\mathcal{O}_{\text{vis}}(\mathbf{z}, P) \geq i\}} d\mathbf{z}. \]</p>
+							<p>It describes a weighted sum of volumes of regions with specified minimal achieved order. If a region is not observed by any sensor it assigns value \( 0 \). If a region is observed by at least one sensor it assigns value \( w_1 \), if observed by at least two sensors the assigned value is \( w_1 + w_2 \) and so on. This allows us to measure the value of partial coverage and we are able to analyze the quality of the sensor set produced by the greedy algorithm.</p>
+							<hr>
+							<h4>Effectivity guarantee</h4>
+							<p>Let \( P_n = \{x_1,...,x_n\} \) be the set of $n$ sensors placed according to the greedy algorithm using \( \mathcal{G}_k \) and parameter \( \epsilon \in [0,1) \).</p>
+							<p>\[ P_l^* = \{x_1^*,...,x_l^*\}\in \text{argmax}_{P \subseteq \Omega_\text{free}, \vert P \vert = l} f_k(P) \implies f_k(P_n) \geq \left( 1 -  e^{-(1-\epsilon)\frac{n}{l}} \right) f_K(P_l^*). \]</p>
+							<hr>
+							<p>Also for empirical examples the algorithm produces promising results. In the example shown 10 sensor are sufficient to cover 45% of \(\Omega_\text{free}\) with order 3 visiblity (left). After 24 sensors are placed 90% of the free space is observed by at least 3 sensors and the greedy algorithm terminates (right).</p>
+							<center>
+								<img src="images/project_MultiCov/Greedy_Results.jpg" align="center">
+							</center>
+							<h2>Parallel Greedy Algorithm</h2>
+							<p>Another approach we looked at was to split the multi-coverage problem into multiple single coverage problems. Solving the <a href="https://arxiv.org/abs/2010.09001">single coverage problem</a> using the greedy algorithm using objective function \( G_1 \) has been expensively studied in the past and promises to be effective. Since practice we want to avoid sensors being placed too close or at the same location, we place the first sensor in each run randomly to introduce variability in the sensor network.</p>
+							<pre>
+								def par_greedy_alg(eps, k):
+									P = list()
+									for i in range(k):
+										S = eps_greedy_alg(eps, 1)
+										P += S
+									return P</pre>
+							<p>Note that the calculations inside the for loop are independent of eachother and can therefore be performed in parallel which significantly increases the speed. Here 9 sensors were needed to observe 43% of the \( \Omega_\text{free} \) with at least 3 sensors which is slightly worse that the result of the order 3 greedy algorithm. However the termination criterion of 90% observed by at least 3 sensors is reached using only 18 sensors.</p>
+							<center>
+								<img src="images/project_MultiCov/RoundRobin_Results.jpg" align="center">
+							</center>
+							<h2>Learning the Objective Function using Deep Learning</h2>
+							<p>In the algorithms discussed above the evaluation of the objective function \( \mathcal{G}_k \) and \( \mathcal{G}_k \) is still computationally expensive. We use deep learning techniques to compute approximations of $\( \mathcal{G}_k \) which significantly imporves the speed of the algorithm once trained. In this approach we use the <a href="https://arxiv.org/abs/1611.09326">TiraFL</a> network architecture to approximate the objective function \( \mathcal{G}_k \).</p>
+							<p>\[ \mathcal{G}^\theta_k(x, P, \Omega_\text{free}) \approx G_k(x, P) \]</p>
+							<p>The approximation of \( \mathcal{G}_1 \) has been discussed in <a href="https://arxiv.org/abs/2010.09001">"Visibility Optimization for Surveillance-Evasion Games"</a>. To compare the different methods we used 50 sample maps generated by assigning random heights to random crops of <a href="https://www.cs.toronto.edu/~vmnih/docs/Mnih_Volodymyr_PhD_Thesis.pdf">Massachusetts building footprints</a>.</p>
+							<center>
+								<img src="images/project_MultiCov/Boxplot_90.png" width="800" height="343">
+							</center>
+							<p>The boxplots illustrate the number of sensor needed to reach the threshold of 90% order 3 coverage. Both the greedy and parallel greedy algorithm are shown to be very effective. The network approximation, while not as effective, still consistently produces good results. As reference we also show the results for random placement of sensors.</p>
+							
+						</div>
+					</section>
+
+			</div>
+
+		<!-- Footer -->
+			<footer id="footer" class="wrapper alt">
+				<div class="inner">
+					<ul class="menu">
+						<li>&copy; Untitled. All rights reserved.</li><li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
+					</ul>
+				</div>
+			</footer>
+
+		<!-- Scripts -->
+			<script src="assets/js/jquery.min.js"></script>
+			<script src="assets/js/jquery.scrollex.min.js"></script>
+			<script src="assets/js/jquery.scrolly.min.js"></script>
+			<script src="assets/js/browser.min.js"></script>
+			<script src="assets/js/breakpoints.min.js"></script>
+			<script src="assets/js/util.js"></script>
+			<script src="assets/js/main.js"></script>
+
+	</body>
+</html>
